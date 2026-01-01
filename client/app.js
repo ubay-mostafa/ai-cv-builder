@@ -1,9 +1,12 @@
+const API_BASE = "https://ai-cv-builder-amye.onrender.com";
+
 const form = document.getElementById("cv-form");
 const result = document.getElementById("result");
 const downloadBtn = document.getElementById("download-btn");
 
 let currentCV = "";
 
+// Handle CV generation
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -14,43 +17,60 @@ form.addEventListener("submit", async (e) => {
   result.innerHTML = "Generating...";
   downloadBtn.style.display = "none";
 
-  const response = await fetch("http://localhost:3000/generate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ name, job, skills }),
-  });
+  try {
+    const response = await fetch(`${API_BASE}/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, job, skills }),
+    });
 
-  const data = await response.json(); // 👈 THIS IS THE LINE
+    if (!response.ok) {
+      throw new Error("Failed to generate CV");
+    }
 
-  // 👇 THIS IS "INSIDE FETCH SUCCESS"
-  currentCV = data.cv;
-  downloadBtn.style.display = "block";
+    const data = await response.json();
 
-  result.innerHTML = `
-    <h3>${data.message}</h3>
-    <pre>${data.cv}</pre>
-  `;
+    currentCV = data.cv;
+    downloadBtn.style.display = "block";
+
+    result.innerHTML = `
+      <h3>${data.message}</h3>
+      <pre>${data.cv}</pre>
+    `;
+  } catch (error) {
+    console.error(error);
+    result.innerHTML = "Something went wrong. Please try again.";
+  }
 });
 
-// DOWNLOAD PDF
+// Handle PDF download
 downloadBtn.addEventListener("click", async () => {
-  const response = await fetch("http://localhost:3000/download-pdf", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ cv: currentCV }),
-  });
+  try {
+    const response = await fetch(`${API_BASE}/download-pdf`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ cv: currentCV }),
+    });
 
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
+    if (!response.ok) {
+      throw new Error("Failed to download PDF");
+    }
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "cv.pdf";
-  a.click();
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
 
-  window.URL.revokeObjectURL(url);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cv.pdf";
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error(error);
+    alert("PDF download failed.");
+  }
 });
